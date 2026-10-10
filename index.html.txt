@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ajout Rapide Google Agenda</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px 16px;
+      min-height: 100vh;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    header h1 { font-size: 1.5rem; margin-bottom: 6px; }
+    header p { color: var(--muted); font-size: 0.9rem; }
+
+    /* Barre d'heure optionnelle */
+    .time-bar {
+      max-width: 650px;
+      margin: 0 auto 28px auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 14px 18px;
+      border-radius: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .time-bar label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .time-inputs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    input[type="datetime-local"] {
+      background: #0b1120;
+      border: 1px solid var(--border);
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+    }
+    .btn-reset {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+    }
+    .btn-reset:hover { color: #fff; border-color: #64748b; }
+
+    /* Grille des 7 catégories */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .col {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .col-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .col-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      cursor: pointer;
+      text-align: left;
+      color: inherit;
+      width: 100%;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: var(--col-color, #60a5fa);
+    }
+    .card-title {
+      font-weight: 600;
+      font-size: 0.92rem;
+      margin-bottom: 6px;
+    }
+    .card-meta {
+      font-size: 0.78rem;
+      color: var(--muted);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .card-pill {
+      display: inline-block;
+      background: rgba(255,255,255,0.06);
+      padding: 3px 6px;
+      border-radius: 5px;
+      width: fit-content;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Ajout Rapide Google Agenda</h1>
+    <p>Clique sur un événement pour l'ouvrir immédiatement dans ton Google Agenda avec nom et lieu pré-remplis.</p>
+  </header>
+
+  <!-- Option : renseigner l'heure avant de cliquer (facultatif) -->
+  <div class="time-bar">
+    <div>
+      <label>Horaire pré-rempli (facultatif) :</label>
+      <div style="font-size: 0.75rem; color: var(--muted);">Si vide, Google Agenda s'ouvre pour que tu choisisses sur place.</div>
+    </div>
+    <div class="time-inputs">
+      <input type="datetime-local" id="quickStart">
+      <button class="btn-reset" onclick="document.getElementById('quickStart').value=''">Effacer</button>
+    </div>
+  </div>
+
+  <!-- Conteneur des 7 colonnes -->
+  <div class="board" id="board"></div>
+
+  <script>
+    // =========================================================================
+    // TES 7 CATÉGORIES & ÉVÉNEMENTS (Personnalise les titres, lieux et durées)
+    // =========================================================================
+    const categories = [
+      {
+        name: "Catégorie 1",
+        color: "#3b82f6", // Bleu
+        events: [
+          { title: "Événement 1A", location: "Lieu fixe 1A", duration: 60 },
+          { title: "Événement 1B", location: "Lieu fixe 1B", duration: 90 }
+        ]
+      },
+      {
+        name: "Catégorie 2",
+        color: "#10b981", // Vert
+        events: [
+          { title: "Événement 2A", location: "Lieu fixe 2A", duration: 60 },
+          { title: "Événement 2B", location: "Lieu fixe 2B", duration: 45 }
+        ]
+      },
+      {
+        name: "Catégorie 3",
+        color: "#f59e0b", // Orange
+        events: [
+          { title: "Événement 3A", location: "Lieu fixe 3A", duration: 75 },
+          { title: "Événement 3B", location: "Lieu fixe 3B", duration: 120 }
+        ]
+      },
+      {
+        name: "Catégorie 4",
+        color: "#ef4444", // Rouge
+        events: [
+          { title: "Événement 4A", location: "Lieu fixe 4A", duration: 60 },
+          { title: "Événement 4B", location: "Lieu fixe 4B", duration: 30 }
+        ]
+      },
+      {
+        name: "Catégorie 5",
+        color: "#8b5cf6", // Violet
+        events: [
+          { title: "Événement 5A", location: "Lieu fixe 5A", duration: 90 },
+          { title: "Événement 5B", location: "Lieu fixe 5B", duration: 60 }
+        ]
+      },
+      {
+        name: "Catégorie 6",
+        color: "#06b6d4", // Cyan
+        events: [
+          { title: "Événement 6A", location: "Lieu fixe 6A", duration: 30 },
+          { title: "Événement 6B", location: "Lieu fixe 6B", duration: 45 }
+        ]
+      },
+      {
+        name: "Catégorie 7",
+        color: "#ec4899", // Rose
+        events: [
+          { title: "Événement 7A", location: "Lieu fixe 7A", duration: 45 },
+          { title: "Événement 7B", location: "Lieu fixe 7B", duration: 60 }
+        ]
+      }
+    ];
+
+    // Génère l'URL officielle Google Calendar
+    function openGoogleCalendar(ev) {
+      let baseUrl = "https://calendar.google.com/calendar/render?action=TEMPLATE";
+      baseUrl += "&text=" + encodeURIComponent(ev.title);
+      baseUrl += "&location=" + encodeURIComponent(ev.location);
+
+      // Si l'utilisateur a saisi une heure dans le bandeau
+      const startInput = document.getElementById('quickStart').value;
+      if (startInput) {
+        const start = new Date(startInput);
+        const end = new Date(start.getTime() + (ev.duration || 60) * 60000);
+        
+        const formatUTC = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+        baseUrl += "&dates=" + formatUTC(start) + "/" + formatUTC(end);
+      }
+
+      // Ouvre Google Calendar dans un nouvel onglet avec tout pré-rempli
+      window.open(baseUrl, '_blank');
+    }
+
+    // Affichage des colonnes et des cartes
+    function render() {
+      const container = document.getElementById('board');
+      container.innerHTML = '';
+
+      categories.forEach(cat => {
+        const col = document.createElement('div');
+        col.className = 'col';
+
+        col.innerHTML = `
+          <div class="col-header">
+            <span class="col-dot" style="background-color: ${cat.color}"></span>
+            <span>${cat.name}</span>
+          </div>
+        `;
+
+        cat.events.forEach(ev => {
+          const card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'card';
+          card.style.setProperty('--col-color', cat.color);
+
+          card.innerHTML = `
+            <div class="card-title">${ev.title}</div>
+            <div class="card-meta">
+              <span class="card-pill">📍 ${ev.location}</span>
+              <span class="card-pill">⏱️ ${ev.duration} min</span>
+            </div>
+          `;
+
+          card.onclick = () => openGoogleCalendar(ev);
+          col.appendChild(card);
+        });
+
+        container.appendChild(col);
+      });
+    }
+
+    render();
+  </script>
+</body>
+</html>
